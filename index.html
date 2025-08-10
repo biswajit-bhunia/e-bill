@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electric Bill Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top to prevent jumping on content load */
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-4xl space-y-8">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6">Electric Bill of <span id="billMonth">Month</span> ⚡</h1>
+
+        <!-- Message Display Area -->
+        <div id="message-display" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md relative" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="message-text"></span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('message-display').classList.add('hidden')">
+                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.103l-2.651 3.746a1.2 1.2 0 1 1-1.697-1.697l3.746-2.651-3.746-2.651a1.2 1.2 0 1 1 1.697-1.697L10 8.897l2.651-3.746a1.2 1.2 0 1 1 1.697 1.697L11.103 10l3.746 2.651a1.2 1.2 0 0 1 0 1.698z"/></svg>
+            </span>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Unit Rate -->
+            <div class="flex flex-col">
+                <label for="unitRate" class="text-sm font-medium text-gray-700 mb-1">Unit Rate (per unit)</label>
+                <input type="number" id="unitRate" value="10" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 10">
+            </div>
+            <!-- Month Selection -->
+            <div class="flex flex-col">
+                <label for="monthSelect" class="text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                <select id="monthSelect" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November" selected>November</option>
+                    <option value="December">December</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Meter Readings -->
+        <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Main Meter Readings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex flex-col">
+                    <label for="submeterPresent" class="text-sm font-medium text-gray-700 mb-1">Submeter Present Reading</label>
+                    <input type="number" id="submeterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12762" value="12762">
+                </div>
+                <div class="flex flex-col">
+                    <label for="submeterPrevious" class="text-sm font-medium text-gray-700 mb-1">Submeter Previous Reading</label>
+                    <input type="number" id="submeterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12700" value="12700">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-700 mb-1">Units Consumed</label>
+                    <input type="text" id="submeterUnits" class="p-3 bg-gray-200 border border-gray-300 rounded-lg cursor-not-allowed" value="0" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Water Meter Readings -->
+        <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Water Meter Readings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex flex-col">
+                    <label for="waterPresent" class="text-sm font-medium text-gray-700 mb-1">Water Present Reading</label>
+                    <input type="number" id="waterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1212" value="1212">
+                </div>
+                <div class="flex flex-col">
+                    <label for="waterPrevious" class="text-sm font-medium text-gray-700 mb-1">Water Previous Reading</label>
+                    <input type="number" id="waterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1201" value="1201">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-700 mb-1">Units Consumed</label>
+                    <input type="text" id="waterUnits" class="p-3 bg-gray-200 border border-gray-300 rounded-lg cursor-not-allowed" value="0" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Individual Member Readings -->
+        <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Individual Member Readings</h2>
+            <div id="membersContainer" class="space-y-4">
+                <!-- Member rows will be added here -->
+            </div>
+            <button id="addMemberBtn" class="mt-6 w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out transform hover:scale-105">
+                ➕ Add Member
+            </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mt-8">
+            <button id="calculateBillBtn" class="w-full sm:w-1/2 px-8 py-4 bg-green-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out transform hover:scale-105">
+                Calculate Bill
+            </button>
+            <button id="generatePdfBtn" class="w-full sm:w-1/2 px-8 py-4 bg-red-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition duration-150 ease-in-out transform hover:scale-105">
+                Generate PDF
+            </button>
+        </div>
+
+        <!-- Results Display -->
+        <div id="resultsDisplay" class="bg-white p-6 rounded-xl shadow-2xl mt-8 hidden">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Bill Summary</h2>
+            <div id="commonCalculations" class="mb-6 border-b pb-4 border-gray-200">
+                <p class="text-lg text-gray-700"><span class="font-semibold">Submeter Units Consumed:</span> <span id="displaySubmeterUnits">0</span> units</p>
+                <p class="text-lg text-gray-700"><span class="font-semibold">Water Units Consumed:</span> <span id="displayWaterUnits">0</span> units</p>
+                <p class="text-lg text-gray-700"><span class="font-semibold">Total Common Electricity Units:</span> <span id="displayTotalCommonElectricityUnits">0</span> units</p>
+                <p class="text-lg text-gray-700"><span class="font-semibold">Water + Common Use Cost per Person:</span> Rs. <span id="displayWaterCommonCostPerPerson">0.00</span></p>
+                <p class="text-lg text-gray-700"><span class="font-semibold">Water + Common Use Calculation:</span> <span id="displayWaterCommonCalculation"></span></p>
+            </div>
+            <div id="memberBills" class="space-y-4">
+                <!-- Individual member bills will be displayed here -->
+            </div>
+            <p class="text-xl font-bold text-gray-800 mt-6 text-right">
+                Total Bill (Sum of all individual bills): Rs. <span id="displayGrandTotal">0.00</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Ensure jsPDF is available
+        const { jsPDF } = window.jspdf;
+
+        // DOM Elements
+        const unitRateInput = document.getElementById('unitRate');
+        const monthSelect = document.getElementById('monthSelect');
+        const billMonthDisplay = document.getElementById('billMonth');
+        const submeterPresentInput = document.getElementById('submeterPresent');
+        const submeterPreviousInput = document.getElementById('submeterPrevious');
+        const submeterUnitsDisplay = document.getElementById('submeterUnits');
+        const waterPresentInput = document.getElementById('waterPresent');
+        const waterPreviousInput = document.getElementById('waterPrevious');
+        const waterUnitsDisplay = document.getElementById('waterUnits');
+        const membersContainer = document.getElementById('membersContainer');
+        const addMemberBtn = document.getElementById('addMemberBtn');
+        const calculateBillBtn = document.getElementById('calculateBillBtn');
+        const generatePdfBtn = document.getElementById('generatePdfBtn');
+        const resultsDisplay = document.getElementById('resultsDisplay');
+        const messageDisplay = document.getElementById('message-display');
+        const messageText = document.getElementById('message-text');
+        const displayWaterCommonCalculation = document.getElementById('displayWaterCommonCalculation');
+
+
+        let memberIdCounter = 0; // To ensure unique IDs for members
+        let storedMemberData = []; // To store member data for PDF generation
+
+        // --- Utility Functions ---
+
+        /**
+         * Displays an error message to the user.
+         * @param {string} msg The message to display.
+         */
+        function showMessage(msg) {
+            messageText.textContent = msg;
+            messageDisplay.classList.remove('hidden');
+        }
+
+        /**
+         * Calculates units consumed from present and previous readings.
+         * @param {number} present
+         * @param {number} previous
+         * @returns {number} Units consumed, or 0 if inputs are invalid or present < previous.
+         */
+        function calculateUnits(present, previous) {
+            if (isNaN(present) || isNaN(previous)) {
+                return 0;
+            }
+            const units = present - previous;
+            return units > 0 ? units : 0; // Prevent negative units
+        }
+
+        /**
+         * Updates the units consumed display for a given meter.
+         * @param {HTMLElement} presentInput The input element for present reading.
+         * @param {HTMLElement} previousInput The input element for previous reading.
+         * @param {HTMLElement} unitsDisplay The input element to display units.
+         */
+        function updateUnitsDisplay(presentInput, previousInput, unitsDisplay) {
+            const present = parseFloat(presentInput.value);
+            const previous = parseFloat(previousInput.value);
+            const units = calculateUnits(present, previous);
+            unitsDisplay.value = units.toFixed(0);
+        }
+
+        /**
+         * Adds a new member input row to the calculator.
+         */
+        function addMember() {
+            memberIdCounter++;
+            const memberRowId = `member-${memberIdCounter}`;
+
+            const memberDiv = document.createElement('div');
+            memberDiv.id = memberRowId;
+            memberDiv.classList.add('grid', 'grid-cols-1', 'md:grid-cols-5', 'gap-4', 'items-end', 'border-t', 'border-gray-200', 'pt-4', 'first:border-t-0', 'first:pt-0');
+            memberDiv.innerHTML = `
+                <div class="flex flex-col">
+                    <label for="memberName-${memberIdCounter}" class="text-sm font-medium text-gray-700 mb-1">Member Name</label>
+                    <input type="text" id="memberName-${memberIdCounter}" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., Gautam">
+                </div>
+                <div class="flex flex-col">
+                    <label for="memberPresent-${memberIdCounter}" class="text-sm font-medium text-gray-700 mb-1">Present Reading</label>
+                    <input type="number" id="memberPresent-${memberIdCounter}" class="member-meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1779">
+                </div>
+                <div class="flex flex-col">
+                    <label for="memberPrevious-${memberIdCounter}" class="text-sm font-medium text-gray-700 mb-1">Previous Reading</label>
+                    <input type="number" id="memberPrevious-${memberIdCounter}" class="member-meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1777">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium text-gray-700 mb-1">Units Consumed</label>
+                    <input type="text" id="memberUnits-${memberIdCounter}" class="p-3 bg-gray-200 border border-gray-300 rounded-lg cursor-not-allowed" value="0" readonly>
+                </div>
+                <div class="flex flex-col">
+                    <label for="peopleInRoom-${memberIdCounter}" class="text-sm font-medium text-gray-700 mb-1">People in Room</label>
+                    <div class="flex items-center">
+                        <input type="number" id="peopleInRoom-${memberIdCounter}" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm w-full" value="1" min="1">
+                        <button type="button" class="remove-member-btn ml-2 px-3 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-150 ease-in-out shadow-sm" data-member-id="${memberRowId}">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+            membersContainer.appendChild(memberDiv);
+
+            // Attach event listeners for the new row
+            const newPresentInput = document.getElementById(`memberPresent-${memberIdCounter}`);
+            const newPreviousInput = document.getElementById(`memberPrevious-${memberIdCounter}`);
+            const newUnitsDisplay = document.getElementById(`memberUnits-${memberIdCounter}`);
+            
+            // Add input listeners for real-time unit calculation
+            newPresentInput.addEventListener('input', () => updateUnitsDisplay(newPresentInput, newPreviousInput, newUnitsDisplay));
+            newPreviousInput.addEventListener('input', () => updateUnitsDisplay(newPresentInput, newPreviousInput, newUnitsDisplay));
+
+            // Attach remove button listener
+            memberDiv.querySelector('.remove-member-btn').addEventListener('click', (event) => {
+                removeMember(event.target.dataset.memberId);
+            });
+        }
+
+        /**
+         * Removes a member row from the calculator.
+         * @param {string} memberId The ID of the member row to remove.
+         */
+        function removeMember(memberId) {
+            const memberRow = document.getElementById(memberId);
+            if (memberRow) {
+                memberRow.remove();
+            }
+        }
+
+        /**
+         * Performs the full bill calculation based on all inputs.
+         */
+        function calculateBill() {
+            messageDisplay.classList.add('hidden'); // Hide previous messages
+
+            const unitRate = parseFloat(unitRateInput.value);
+            if (isNaN(unitRate) || unitRate <= 0) {
+                showMessage('Please enter a valid Unit Rate (must be a positive number).');
+                return;
+            }
+
+            // Main Meter (Submeter)
+            const submeterPresent = parseFloat(submeterPresentInput.value);
+            const submeterPrevious = parseFloat(submeterPreviousInput.value);
+            const submeterUnits = calculateUnits(submeterPresent, submeterPrevious);
+            document.getElementById('displaySubmeterUnits').textContent = submeterUnits.toFixed(0);
+
+            // Water Meter
+            const waterPresent = parseFloat(waterPresentInput.value);
+            const waterPrevious = parseFloat(waterPreviousInput.value);
+            const waterUnits = calculateUnits(waterPresent, waterPrevious);
+            document.getElementById('displayWaterUnits').textContent = waterUnits.toFixed(0);
+
+            let sumOfIndividualSubmeterUnits = 0;
+            let totalNumberOfPeople = 0;
+            storedMemberData = []; // Clear previous data
+
+            const memberRows = membersContainer.querySelectorAll('[id^="member-"]');
+            if (memberRows.length === 0) {
+                showMessage('Please add at least one member to calculate the bill.');
+                return;
+            }
+
+            memberRows.forEach(row => {
+                const id = row.id.split('-')[1];
+                const memberName = document.getElementById(`memberName-${id}`).value || `Member ${id}`;
+                const memberPresent = parseFloat(document.getElementById(`memberPresent-${id}`).value);
+                const memberPrevious = parseFloat(document.getElementById(`memberPrevious-${id}`).value);
+                const peopleInRoom = parseInt(document.getElementById(`peopleInRoom-${id}`).value);
+
+                if (isNaN(memberPresent) || isNaN(memberPrevious) || isNaN(peopleInRoom) || peopleInRoom < 1) {
+                    showMessage(`Please enter valid readings and people count for ${memberName}.`);
+                    // Do not return here, continue processing other valid members.
+                    return; 
+                }
+
+                const individualSubmeterUnits = calculateUnits(memberPresent, memberPrevious);
+                sumOfIndividualSubmeterUnits += individualSubmeterUnits;
+                totalNumberOfPeople += peopleInRoom;
+
+                storedMemberData.push({
+                    name: memberName,
+                    present: memberPresent,
+                    previous: memberPrevious,
+                    individualUnits: individualSubmeterUnits,
+                    peopleInRoom: peopleInRoom,
+                });
+            });
+
+            // If all members had invalid data, storedMemberData will be empty
+            if (storedMemberData.length === 0) {
+                showMessage('No valid member data found for calculation. Please check your inputs.');
+                resultsDisplay.classList.add('hidden');
+                return;
+            }
+
+            // Calculations based on updated logic
+            const totalCommonElectricityUnits = Math.max(0, submeterUnits - sumOfIndividualSubmeterUnits); // Ensure non-negative common units
+            document.getElementById('displayTotalCommonElectricityUnits').textContent = totalCommonElectricityUnits.toFixed(0);
+
+            const waterAndCommonUnits = waterUnits + totalCommonElectricityUnits;
+            const waterAndCommonTotalCost = waterAndCommonUnits * unitRate;
+
+            let waterAndCommonCostPerPerson = 0;
+            if (totalNumberOfPeople > 0) {
+                waterAndCommonCostPerPerson = waterAndCommonTotalCost / totalNumberOfPeople;
+            } else {
+                showMessage('Total number of people is zero. Cannot calculate common cost. Please ensure "People in Room" is entered for all members.');
+                resultsDisplay.classList.add('hidden');
+                return;
+            }
+
+            displayWaterCommonCostPerPerson.textContent = waterAndCommonCostPerPerson.toFixed(2);
+
+            // Generate Water + Common Use Calculation string for display
+            let individualSubmeterUnitsSumStr = storedMemberData.map(m => m.individualUnits).join(' + ');
+            let waterCommonCalculationStr = `${waterUnits.toFixed(0)} + {${submeterUnits.toFixed(0)} - (${individualSubmeterUnitsSumStr})} = ${waterAndCommonUnits.toFixed(0)} * ${unitRate.toFixed(0)} / ${totalNumberOfPeople} = Rs. ${waterAndCommonCostPerPerson.toFixed(2)}`;
+            displayWaterCommonCalculation.textContent = waterCommonCalculationStr;
+
+
+            let grandTotalBill = 0;
+            const memberBillsContainer = document.getElementById('memberBills');
+            memberBillsContainer.innerHTML = ''; // Clear previous results
+
+            storedMemberData.forEach(member => {
+                const memberTotalBill = (member.individualUnits * unitRate) + (member.peopleInRoom * waterAndCommonCostPerPerson);
+                grandTotalBill += memberTotalBill;
+
+                const memberBillDiv = document.createElement('div');
+                memberBillDiv.classList.add('bg-blue-50', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-blue-100');
+                memberBillDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-blue-800">${member.name}</h3>
+                    <p class="text-md text-gray-700">Individual Units Consumed: <span class="font-medium">${member.individualUnits.toFixed(0)}</span> units</p>
+                    <p class="text-md text-gray-700">Share of (Water + Common Use): Rs. <span class="font-medium">${(member.peopleInRoom * waterAndCommonCostPerPerson).toFixed(2)}</span></p>
+                    <p class="text-lg font-bold text-blue-900">Total Bill: Rs. <span class="text-2xl">${memberTotalBill.toFixed(2)}</span></p>
+                `;
+                memberBillsContainer.appendChild(memberBillDiv);
+            });
+
+            document.getElementById('displayGrandTotal').textContent = grandTotalBill.toFixed(2);
+            resultsDisplay.classList.remove('hidden'); // Show results section
+        }
+
+        /**
+         * Generates and downloads a PDF summary of the bill.
+         */
+        function generatePdf() {
+            messageDisplay.classList.add('hidden'); // Hide previous messages
+
+            const unitRate = parseFloat(unitRateInput.value);
+            const submeterPresent = parseFloat(submeterPresentInput.value);
+            const submeterPrevious = parseFloat(submeterPreviousInput.value);
+            const submeterUnits = parseFloat(submeterUnitsDisplay.value);
+            const waterPresent = parseFloat(waterPresentInput.value);
+            const waterPrevious = parseFloat(waterPreviousInput.value);
+            const waterUnits = parseFloat(waterUnitsDisplay.value);
+
+            const totalCommonElectricityUnits = parseFloat(document.getElementById('displayTotalCommonElectricityUnits').textContent);
+            const waterCommonCostPerPerson = parseFloat(displayWaterCommonCostPerPerson.textContent);
+            const grandTotal = parseFloat(document.getElementById('displayGrandTotal').textContent);
+            const selectedMonth = monthSelect.value;
+            const totalPeople = storedMemberData.reduce((sum, member) => sum + member.peopleInRoom, 0);
+
+
+            // Re-validate critical values as they might have changed or not been calculated yet
+            if (isNaN(unitRate) || unitRate <= 0) {
+                showMessage('Please ensure Unit Rate is valid and the bill is calculated before generating a PDF.');
+                return;
+            }
+            if (isNaN(submeterUnits) || isNaN(waterUnits) || isNaN(totalCommonElectricityUnits) || isNaN(waterCommonCostPerPerson)) {
+                showMessage('Please calculate the bill first before generating a PDF. Some common values are missing.');
+                return;
+            }
+            if (storedMemberData.length === 0) {
+                 showMessage('No member data available for PDF generation. Please add members and calculate the bill.');
+                 return;
+            }
+
+
+            const doc = new jsPDF();
+            let yPos = 20;
+
+            // Title with emoji - Adjusted font size for better fit
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(15); // Reduced font size from 26 to 22
+            doc.text(`Electric Bill - ${selectedMonth}`, 105, yPos, null, null, "center");
+            yPos += 20;
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 15, yPos);
+            yPos += 10;
+
+            doc.line(15, yPos, 195, yPos); // Horizontal line
+            yPos += 10;
+
+            // Common Readings Summary Table
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("Meter Readings Summary:", 15, yPos);
+            yPos += 12;
+
+            // Table for Main and Water Meters
+            doc.setFontSize(10);
+            doc.setFillColor(230, 230, 230);
+            doc.rect(15, yPos, 180, 8, 'F'); // Header background
+            doc.setTextColor(0, 0, 0);
+            doc.text("Meter", 17, yPos + 6);
+            doc.text("Present", 60, yPos + 6);
+            doc.text("Previous", 100, yPos + 6);
+            doc.text("Units Consumed", 145, yPos + 6);
+            yPos += 8;
+
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50);
+
+            // Submeter row
+            doc.text("Submeter", 17, yPos + 6);
+            doc.text(submeterPresent.toFixed(0), 60, yPos + 6);
+            doc.text(submeterPrevious.toFixed(0), 100, yPos + 6);
+            doc.text(submeterUnits.toFixed(0), 145, yPos + 6);
+            yPos += 8;
+
+            // Water row
+            doc.text("Water", 17, yPos + 6);
+            doc.text(waterPresent.toFixed(0), 60, yPos + 6);
+            doc.text(waterPrevious.toFixed(0), 100, yPos + 6);
+            doc.text(waterUnits.toFixed(0), 145, yPos + 6);
+            yPos += 8;
+            
+            // Removed the "Total" row for Submeter and Water as requested
+            // doc.setDrawColor(200, 200, 200);
+            // doc.line(15, yPos, 195, yPos);
+            // yPos += 4;
+            // doc.setFont("helvetica", "bold");
+            // doc.text("Total", 17, yPos + 6);
+            // doc.text((submeterPresent + waterPresent).toFixed(0), 60, yPos + 6);
+            // doc.text((submeterPrevious + waterPrevious).toFixed(0), 100, yPos + 6);
+            // doc.text((submeterUnits + waterUnits).toFixed(0), 145, yPos + 6);
+            // yPos += 12;
+
+            doc.line(15, yPos, 195, yPos); // Horizontal line after table
+            yPos += 10;
+
+            // Water + Common Use Calculation Breakdown in PDF
+            const individualSubmeterUnitsSumStr = storedMemberData.map(m => m.individualUnits).join(' + ');
+            const waterAndCommonUnits = waterUnits + totalCommonElectricityUnits; // This was already calculated in calculateBill
+            
+            // Reconstruct the calculation string for PDF from raw values, removed "Water + Common Use Calculation:" prefix
+            let pdfWaterCommonCalcStr = `Water + Common use = ${waterUnits.toFixed(0)} + {${submeterUnits.toFixed(0)} - (${individualSubmeterUnitsSumStr})} = ${waterAndCommonUnits.toFixed(0)} * ${unitRate.toFixed(0)} / ${totalPeople} = Rs. ${waterCommonCostPerPerson.toFixed(2)}`;
+            
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            // Adjust max width and line height to prevent cutting off or overlapping
+            doc.text(pdfWaterCommonCalcStr, 15, yPos, { maxWidth: 180, lineHeightFactor: 1.5 }); // Removed prefix
+            yPos += doc.getTextDimensions(pdfWaterCommonCalcStr, { maxWidth: 180, lineHeightFactor: 1.5 }).h + 5; // Dynamic yPos adjustment
+            
+            doc.line(15, yPos, 195, yPos); // Horizontal line
+            yPos += 10;
+
+
+            // Individual Member Bills Section
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("Individual Member Bills:", 15, yPos);
+            yPos += 12;
+
+            // Table header with new columns
+            doc.setFontSize(9); // Smaller font for more columns
+            doc.setFillColor(230, 230, 230); // Light gray background for header
+            doc.rect(15, yPos, 185, 8, 'F'); // Adjusted width for new columns
+            doc.setTextColor(0, 0, 0);
+            doc.text("Member Name", 17, yPos + 6);
+            doc.text("Present", 50, yPos + 6); // New column
+            doc.text("Previous", 75, yPos + 6); // New column
+            doc.text("Ind. Units", 100, yPos + 6);
+            doc.text("Shared Cost", 130, yPos + 6);
+            doc.text("Total Bill (Rs.)", 165, yPos + 6);
+            yPos += 8;
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9); // Smaller font for data
+            doc.setTextColor(50, 50, 50); // Darker gray for data
+
+            if (storedMemberData.length === 0) {
+                doc.text("No member data to display.", 105, yPos + 10, null, null, "center");
+                yPos += 20;
+            } else {
+                storedMemberData.forEach(member => {
+                    // Re-calculate values for PDF to ensure consistency
+                    const memberTotalBill = (member.individualUnits * unitRate) + (member.peopleInRoom * waterCommonCostPerPerson);
+                    const memberCommonShare = (member.peopleInRoom * waterCommonCostPerPerson);
+
+                    doc.text(member.name, 17, yPos + 6);
+                    doc.text(member.present.toFixed(0), 50, yPos + 6); // Present Reading
+                    doc.text(member.previous.toFixed(0), 75, yPos + 6); // Previous Reading
+                    doc.text(member.individualUnits.toFixed(0), 100, yPos + 6);
+                    doc.text(memberCommonShare.toFixed(2), 130, yPos + 6);
+                    doc.text(memberTotalBill.toFixed(2), 165, yPos + 6);
+                    yPos += 8;
+
+                    if (yPos > 280) { // Check for page break
+                        doc.addPage();
+                        yPos = 20; // Reset y position for new page
+                        doc.setFontSize(9); // Maintain smaller font for new page header
+                        doc.setFillColor(230, 230, 230);
+                        doc.rect(15, yPos, 185, 8, 'F');
+                        doc.setTextColor(0, 0, 0);
+                        doc.text("Member Name", 17, yPos + 6);
+                        doc.text("Present", 50, yPos + 6);
+                        doc.text("Previous", 75, yPos + 6);
+                        doc.text("Ind. Units", 100, yPos + 6);
+                        doc.text("Shared Cost", 130, yPos + 6);
+                        doc.text("Total Bill (Rs.)", 165, yPos + 6);
+                        yPos += 8;
+                        doc.setFont("helvetica", "normal");
+                        doc.setTextColor(50, 50, 50);
+                    }
+                });
+            }
+
+            yPos += 15;
+            doc.line(15, yPos, 195, yPos); // Horizontal line before grand total
+            yPos += 10;
+
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Grand Total Bill: Rs. ${grandTotal.toFixed(2)}`, 105, yPos, null, null, "center");
+            yPos += 10;
+
+            doc.save(`Electric_Bill_${selectedMonth}.pdf`);
+        }
+
+        // --- Event Listeners ---
+
+        // Update title when month is selected
+        monthSelect.addEventListener('change', () => {
+            billMonthDisplay.textContent = monthSelect.value;
+        });
+
+        // Main meter inputs
+        submeterPresentInput.addEventListener('input', () => updateUnitsDisplay(submeterPresentInput, submeterPreviousInput, submeterUnitsDisplay));
+        submeterPreviousInput.addEventListener('input', () => updateUnitsDisplay(submeterPresentInput, submeterPreviousInput, submeterUnitsDisplay));
+
+        // Water meter inputs
+        waterPresentInput.addEventListener('input', () => updateUnitsDisplay(waterPresentInput, waterPreviousInput, waterUnitsDisplay));
+        waterPreviousInput.addEventListener('input', () => updateUnitsDisplay(waterPresentInput, waterPreviousInput, waterUnitsDisplay));
+
+        addMemberBtn.addEventListener('click', addMember);
+        calculateBillBtn.addEventListener('click', calculateBill);
+        generatePdfBtn.addEventListener('click', generatePdf);
+
+        // Initial setup
+        window.onload = function() {
+            // Set initial month in the heading
+            billMonthDisplay.textContent = monthSelect.value;
+
+            // Add some initial members for demonstration purposes and populate their fields
+            const initialMembers = [
+                { name: 'Soumya', present: '1729', previous: '1723', people: '1' },
+                { name: 'Shovan', present: '466', previous: '461', people: '1' },
+                { name: 'Biswajit', present: '1130', previous: '1098', people: '3' },
+                { name: 'Soham', present: '1447', previous: '1437', people: '1' },
+                { name: 'Shibam', present: '1779', previous: '1777', people: '1' },
+            ];
+
+            initialMembers.forEach(data => {
+                addMember(); // Adds a new row and increments memberIdCounter
+                const currentId = memberIdCounter; // Get the ID of the just-added member
+                document.getElementById(`memberName-${currentId}`).value = data.name;
+                document.getElementById(`memberPresent-${currentId}`).value = data.present;
+                document.getElementById(`memberPrevious-${currentId}`).value = data.previous;
+                document.getElementById(`peopleInRoom-${currentId}`).value = data.people;
+
+                // Crucially, update units for the newly added member row after setting values
+                const newPresentInput = document.getElementById(`memberPresent-${currentId}`);
+                const newPreviousInput = document.getElementById(`memberPrevious-${currentId}`);
+                const newUnitsDisplay = document.getElementById(`memberUnits-${currentId}`);
+                updateUnitsDisplay(newPresentInput, newPreviousInput, newUnitsDisplay);
+            });
+
+            // Initial calculation for main and water meters
+            updateUnitsDisplay(submeterPresentInput, submeterPreviousInput, submeterUnitsDisplay);
+            updateUnitsDisplay(waterPresentInput, waterPreviousInput, waterUnitsDisplay);
+        };
+
+    </script>
+</body>
+</html>
