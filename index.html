@@ -90,11 +90,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex flex-col">
                     <label for="submeterPresent" class="text-sm font-medium text-gray-700 mb-1">Submeter Present Reading</label>
-                    <input type="number" id="submeterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12762" value="12762">
+                    <input type="number" id="submeterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12762" value="">
                 </div>
                 <div class="flex flex-col">
                     <label for="submeterPrevious" class="text-sm font-medium text-gray-700 mb-1">Submeter Previous Reading</label>
-                    <input type="number" id="submeterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12700" value="12700">
+                    <input type="number" id="submeterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 12700" value="">
                 </div>
                 <div class="flex flex-col">
                     <label class="text-sm font-medium text-gray-700 mb-1">Units Consumed</label>
@@ -109,11 +109,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex flex-col">
                     <label for="waterPresent" class="text-sm font-medium text-gray-700 mb-1">Water Present Reading</label>
-                    <input type="number" id="waterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1212" value="1212">
+                    <input type="number" id="waterPresent" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1212" value="">
                 </div>
                 <div class="flex flex-col">
                     <label for="waterPrevious" class="text-sm font-medium text-gray-700 mb-1">Water Previous Reading</label>
-                    <input type="number" id="waterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1201" value="1201">
+                    <input type="number" id="waterPrevious" class="meter-input p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" placeholder="e.g., 1201" value="">
                 </div>
                 <div class="flex flex-col">
                     <label class="text-sm font-medium text-gray-700 mb-1">Units Consumed</label>
@@ -622,11 +622,11 @@
 
             // Add some initial members for demonstration purposes and populate their fields
             const initialMembers = [
-                { name: 'Soumya', present: '1729', previous: '1723', people: '1' },
-                { name: 'Shovan', present: '466', previous: '461', people: '1' },
-                { name: 'Biswajit', present: '1130', previous: '1098', people: '3' },
-                { name: 'Soham', present: '1447', previous: '1437', people: '1' },
-                { name: 'Shibam', present: '1779', previous: '1777', people: '1' },
+                { name: 'Soumya', present: '', previous: '', people: '1' },
+                { name: 'Shovan', present: '', previous: '', people: '1' },
+                { name: 'Biswajit', present: '', previous: '', people: '3' },
+                { name: 'Soham', present: '', previous: '', people: '1' },
+                { name: 'Shibam', present: '', previous: '', people: '1' },
             ];
 
             initialMembers.forEach(data => {
